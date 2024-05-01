@@ -1,34 +1,59 @@
-mod point_mass;
-use cgmath::InnerSpace;
-use point_mass::PointMass;
+use winit::application::ApplicationHandler;
+use winit::event::WindowEvent;
+use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
+use winit::window::{Window, WindowId};
 
-fn main() {
-    let mut black_hole = PointMass::new(
-        cgmath::Point3::new(0.0, 0.0, 0.0),
-        cgmath::Vector3::new(0.0, 0.0, 0.0),
-        point_mass::SOLAR_MASS * 20.0,
-    );
+#[derive(Default)]
+struct App {
+    window: Option<Window>,
+}
 
-    let mut space_craft = PointMass::new(
-        cgmath::Point3::new(150000000.0, 0.0, 0.0),
-        cgmath::Vector3::new(0.0, 1000000.0, 0.0),
-        10000.0,
-    );
+impl ApplicationHandler for App {
+    fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        self.window = Some(event_loop.create_window(Window::default_attributes()).unwrap());
+    }
 
-    while (space_craft.position - black_hole.position).magnitude() > 1.0 {
-        let force_on_space_craft = black_hole.force_on(&space_craft);
-        space_craft.integration_step(force_on_space_craft, 0.0000001);
-        black_hole.integration_step(-force_on_space_craft, 0.0000001);
-        // println!("Spacecraft position: {:?}", space_craft.position);
-        // println!("Spacecraft velocity: {:?}", space_craft.velocity);
+    fn window_event(&mut self, event_loop: &ActiveEventLoop, id: WindowId, event: WindowEvent) {
+        match event {
+            WindowEvent::CloseRequested => {
+                println!("The close button was pressed; stopping");
+                event_loop.exit();
+            },
+            WindowEvent::RedrawRequested => {
+                // Redraw the application.
+                //
+                // It's preferable for applications that do not render continuously to render in
+                // this event rather than in AboutToWait, since rendering in here allows
+                // the program to gracefully handle redraws requested by the OS.
 
-        if (space_craft.position.x < 0.0) {
-            println!("boom!");
-            break;
+                // Draw.
+
+                // Queue a RedrawRequested event.
+                //
+                // You only need to call this if you've determined that you need to redraw in
+                // applications which do not always need to. Applications that redraw continuously
+                // can render here instead.
+                self.window.as_ref().unwrap().request_redraw();
+            }
+            _ => (),
         }
-
-        // Pause execution so we can see the output
-        // std::thread::sleep(std::time::Duration::from_millis(100));
-        // println!("Black hole position: {:?}", black_hole.position);
     }
 }
+
+
+fn main() {
+    let event_loop = EventLoop::new().unwrap();
+
+    // ControlFlow::Poll continuously runs the event loop, even if the OS hasn't
+    // dispatched any events. This is ideal for games and similar applications.
+    event_loop.set_control_flow(ControlFlow::Poll);
+
+    // ControlFlow::Wait pauses the event loop if no events are available to process.
+    // This is ideal for non-game applications that only update in response to user
+    // input, and uses significantly less power/CPU time than ControlFlow::Poll.
+    event_loop.set_control_flow(ControlFlow::Wait);
+
+    let mut app = App::default();
+    event_loop.run_app(&mut app);
+}
+

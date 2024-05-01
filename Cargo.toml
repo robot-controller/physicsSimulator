@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 cgmath = "0.18.0"
+winit = "0.30.0"
