@@ -10,15 +10,20 @@ struct App {
 
 impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-        self.window = Some(event_loop.create_window(Window::default_attributes()).unwrap());
+        self.window = Some(
+            event_loop
+                .create_window(Window::default_attributes())
+                .unwrap(),
+        );
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, id: WindowId, event: WindowEvent) {
+        let _ = id;
         match event {
             WindowEvent::CloseRequested => {
                 println!("The close button was pressed; stopping");
                 event_loop.exit();
-            },
+            }
             WindowEvent::RedrawRequested => {
                 // Redraw the application.
                 //
@@ -40,7 +45,6 @@ impl ApplicationHandler for App {
     }
 }
 
-
 fn main() {
     let event_loop = EventLoop::new().unwrap();
 
@@ -54,6 +58,12 @@ fn main() {
     event_loop.set_control_flow(ControlFlow::Wait);
 
     let mut app = App::default();
-    event_loop.run_app(&mut app);
-}
+    let wgpu_instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
+        backends: wgpu::Backends::PRIMARY,
+        flags: wgpu::InstanceFlags::DEBUG,
+        dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,
+        gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
+    });
 
+    let _ = event_loop.run_app(&mut app);
+}
