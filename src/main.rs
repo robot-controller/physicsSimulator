@@ -17,9 +17,18 @@ fn main() {
 
     while (space_craft.position - black_hole.position).magnitude() > 1.0 {
         let force_on_space_craft = black_hole.force_on(&space_craft);
-        space_craft.integration_step(force_on_space_craft, 0.01);
-        black_hole.integration_step(-force_on_space_craft, 0.01);
-        println!("Spacecraft position: {:?}", space_craft.position);
+        space_craft.integration_step(force_on_space_craft, 0.0000001);
+        black_hole.integration_step(-force_on_space_craft, 0.0000001);
+        // println!("Spacecraft position: {:?}", space_craft.position);
+        // println!("Spacecraft velocity: {:?}", space_craft.velocity);
+
+        if (space_craft.position.x < 0.0) {
+            println!("boom!");
+            break;
+        }
+
+        // Pause execution so we can see the output
+        // std::thread::sleep(std::time::Duration::from_millis(100));
         // println!("Black hole position: {:?}", black_hole.position);
     }
 }

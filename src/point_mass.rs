@@ -25,7 +25,7 @@ impl PointMass {
         (self.position - other.position).magnitude()
     }
 
-    /// Calculate the force on
+    /// Calculate the force on the other mass
     pub fn force_on(&self, other: &PointMass) -> Vector3<f32> {
         let position_difference = self.position - other.position;
         let distance = position_difference.magnitude();
@@ -33,8 +33,8 @@ impl PointMass {
         magnitude * position_difference
     }
 
-    pub fn integration_step(&mut self, force : Vector3<f32>, time: f32) {
+    pub fn integration_step(&mut self, force: Vector3<f32>, time: f32) {
+        self.position += self.velocity * time + 0.5 * force / self.mass * time.powi(2);
         self.velocity += force / self.mass * time;
-        self.position += self.velocity * time;
     }
 }
