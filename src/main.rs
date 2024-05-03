@@ -87,7 +87,7 @@ impl<'a> ApplicationHandler for WGPUApp<'a> {
             }
             WindowEvent::Resized(new_size) => {
                 println!("The window was resized to {:?}", new_size);
-                // self.bruh.as_ref().unwrap().resize(new_size);
+                self.resize(new_size);
             }
             WindowEvent::RedrawRequested => {
                 // Redraw the application.
@@ -103,20 +103,16 @@ impl<'a> ApplicationHandler for WGPUApp<'a> {
                 // You only need to call this if you've determined that you need to redraw in
                 // applications which do not always need to. Applications that redraw continuously
                 // can render here instead.
-                // self.bruh.as_ref().unwrap().update();
-                // match self.bruh.as_ref().unwrap().render() {
-                //     Ok(_) => {}
-                //     // Reconfigure the surface if lost
-                //     Err(wgpu::SurfaceError::Lost) => self
-                //         .bruh
-                //         .as_ref()
-                //         .unwrap()
-                //         .resize(self.bruh.as_ref().unwrap().size),
-                //     // The system is out of memory, we should probably quit
-                //     Err(wgpu::SurfaceError::OutOfMemory) => event_loop.exit(),
-                //     // All other errors (Outdated, Timeout) should be resolved by the next frame
-                //     Err(e) => eprintln!("{:?}", e),
-                // }
+                self.update();
+                match self.render() {
+                    Ok(_) => {}
+                    // Reconfigure the surface if lost
+                    Err(wgpu::SurfaceError::Lost) => self.resize(self.size.unwrap()),
+                    // The system is out of memory, we should probably quit
+                    Err(wgpu::SurfaceError::OutOfMemory) => event_loop.exit(),
+                    // All other errors (Outdated, Timeout) should be resolved by the next frame
+                    Err(e) => eprintln!("{:?}", e),
+                }
             }
             _ => (),
         }
@@ -170,7 +166,7 @@ impl<'a> WGPUApp<'a> {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
+                            r: 1.0,
                             g: 0.2,
                             b: 0.3,
                             a: 1.0,
