@@ -13,6 +13,7 @@ struct WGPUApp<'a> {
     queue: Option<wgpu::Queue>,
     config: Option<wgpu::SurfaceConfiguration>,
     size: Option<winit::dpi::PhysicalSize<u32>>,
+    render_pipeline: Option<wgpu::RenderPipeline>,
 }
 
 impl<'a> ApplicationHandler for WGPUApp<'a> {
@@ -28,6 +29,11 @@ impl<'a> ApplicationHandler for WGPUApp<'a> {
             dx12_shader_compiler: wgpu::Dx12Compiler::Fxc,
             gles_minor_version: wgpu::Gles3MinorVersion::Automatic,
         });
+
+        let available_gpus = wgpu_instance.enumerate_adapters(wgpu::Backends::PRIMARY);
+        for adapter in available_gpus {
+            println!("Available GPU: {:?}", adapter.get_info());
+        }
 
         let surface = wgpu_instance.create_surface(window.clone()).unwrap();
 
@@ -50,6 +56,9 @@ impl<'a> ApplicationHandler for WGPUApp<'a> {
         ))
         .unwrap();
 
+        let info = adapter.get_info();
+        println!("Selected GPU info: {:?}", info);
+
         let surface_capabilities = surface.get_capabilities(&adapter);
 
         let surface_format = surface_capabilities
@@ -71,12 +80,62 @@ impl<'a> ApplicationHandler for WGPUApp<'a> {
             desired_maximum_frame_latency: 2,
         };
 
+        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
+        });
+
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Render Pipeline Layout"),
+                bind_group_layouts: &[],
+                push_constant_ranges: &[],
+            });
+
+        let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("Render pipeline"),
+            layout: Some(&render_pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &shader,
+                entry_point: "vs_main",
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                buffers: &[],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &shader,
+                entry_point: "fs_main",
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: config.format,
+                    blend: Some(wgpu::BlendState::REPLACE),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: Some(wgpu::Face::Back),
+                unclipped_depth: false,
+                polygon_mode: wgpu::PolygonMode::Fill,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: wgpu::MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            multiview: None,
+        });
+
         self.window = Some(window);
         self.surface = Some(surface);
         self.device = Some(device);
         self.queue = Some(queue);
         self.config = Some(config);
         self.size = Some(size);
+        self.render_pipeline = Some(render_pipeline);
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
@@ -159,7 +218,7 @@ impl<'a> WGPUApp<'a> {
                 });
 
         {
-            let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
@@ -178,6 +237,9 @@ impl<'a> WGPUApp<'a> {
                 occlusion_query_set: None,
                 timestamp_writes: None,
             });
+
+            render_pass.set_pipeline(self.render_pipeline.as_ref().unwrap());
+            render_pass.draw(0..3, 0..1);
         }
 
         // submit will accept anything that implements IntoIter
